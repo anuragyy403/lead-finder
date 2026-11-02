@@ -71,6 +71,43 @@ In the repo on GitHub: **Settings → Secrets and variables → Actions → New 
 | `GOOGLE_SERVICE_ACCOUNT_JSON` | The **whole contents** of the service account `.json` file in `.secrets/` |
 | `CONTACT_EMAIL` | Optional: an email shown to websites the script visits |
 
+## Sheet button (run it from inside the Google Sheet)
+
+Once set up, the sheet gets a **Lead Finder** menu: fill in Targets, click **Lead Finder → Find leads now**, and new
+leads appear in Maps Leads about 5–10 minutes later. It starts the GitHub workflow above, so nobody's computer needs
+to be on. The code is in [`apps_script/Code.gs`](apps_script/Code.gs).
+
+| Menu item | What it does |
+| --- | --- |
+| Find leads now | Searches all active targets and writes to the sheet |
+| Test run (writes nothing) | Same, but nothing is written |
+| Check last run | Shows whether the last run is still going, finished or failed |
+| Set GitHub token | One-time setup (below) |
+
+One click spends at most 3 Google requests per active target, capped at 60.
+
+### One-time setup
+
+1. Add the GitHub secrets from **One-time setup for the Run button** above. The button can't work without them.
+2. **Create a GitHub token** that can only start this workflow: GitHub → your photo → **Settings → Developer
+   settings → Personal access tokens → Fine-grained tokens → Generate new token**.
+   - Name: `lead-finder sheet button`. Expiration: the longest allowed.
+   - Repository access: **Only select repositories** → `lead-finder`.
+   - Permissions → Repository permissions → **Actions: Read and write**. Nothing else.
+   - **Generate token** and copy it (it's shown once).
+3. **Add the script to the sheet**: open the sheet → **Extensions → Apps Script** → delete what's in `Code.gs` →
+   paste the whole of [`apps_script/Code.gs`](apps_script/Code.gs) → **Save** (💾) → close the tab.
+4. **Reload the sheet.** A **Lead Finder** menu appears next to Help.
+5. **Lead Finder → Set GitHub token** → Google asks for permission the first time: **Continue** → choose your account
+   → **Advanced → Go to … (unsafe)** → **Allow**. It says "unsafe" only because this is your own script, not a
+   published app. Then paste the token → **OK**. It should say *Token saved and working*.
+6. Optional: a big button on the Targets tab. **Insert → Drawing** → draw a box with the text "Find leads" → **Save
+   and close** → click the drawing → **⋮ → Assign script** → type `findLeads` → **OK**.
+
+The token is stored in the sheet's script settings, which anyone who can edit the sheet could see. That's why it
+gets only one permission: it can start this workflow, nothing else. When it expires, create a new one and use
+**Set GitHub token** again.
+
 ## Run it on your computer
 
 Needs Python 3.13 and [uv](https://docs.astral.sh/uv/).
