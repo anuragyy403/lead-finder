@@ -33,6 +33,18 @@ more, split a city into areas: `real estate agents` / `Whitefield, Bengaluru`.
   are refreshed.
 - Don't delete or edit the hidden `place_id` column. It's how the script recognises businesses it has seen.
 
+**Contacting leads** (team guidelines):
+
+1. Filter or sort **Score** high → low. Read the **Flaws**: they are your talking points.
+2. Set **Assigned to** before messaging, so two people never contact the same business.
+3. Click the **WhatsApp link** (or **Email link**), write a personal message, and send it yourself.
+4. Update **Status** and **Last contacted**.
+
+- Use your own **WhatsApp Business number**, never a personal or shared one, and start at most **20–30 new chats a
+  day** per number. More than that risks the number being banned.
+- If a business says no or asks not to be contacted, set **Status = Not interested**. That means never contact
+  them again.
+
 **Score**: higher = weaker online presence = better lead. Points per flaw are in [`scoring.toml`](scoring.toml)
 (e.g. no website 40, slow site 15, no WhatsApp button 10), capped at 100. Change the numbers there to re-tune; no
 code change needed.
