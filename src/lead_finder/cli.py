@@ -1,4 +1,4 @@
-"""Command line: lead-finder check | setup-sheet | search "<query>" | run [--dry-run] [--reaudit]"""
+"""Command line: lead-finder check | setup-sheet | search "<query>" | run [--dry-run] [--reaudit] [--summary-only]"""
 
 import argparse
 import asyncio
@@ -65,11 +65,12 @@ def cmd_run(args: argparse.Namespace) -> None:
     settings = load_settings()
     summary = asyncio.run(run(settings, dry_run=args.dry_run, reaudit=args.reaudit))
 
-    print("\nTop leads this run:")
-    rows = [["Score", "Name", "Phone", "Email", "Flaws"]]
-    rows += [[lead.score, lead.place.name, lead.phone or "-", (lead.emails or ["-"])[0], "; ".join(lead.flaws)]
-             for lead in summary.leads[:15]]
-    print_table(rows, [5, 32, 16, 28, 60])
+    if not args.summary_only:  # GitHub Actions logs of a public repo are public: keep lead details out of them
+        print("\nTop leads this run:")
+        rows = [["Score", "Name", "Phone", "Email", "Flaws"]]
+        rows += [[lead.score, lead.place.name, lead.phone or "-", (lead.emails or ["-"])[0], "; ".join(lead.flaws)]
+                 for lead in summary.leads[:15]]
+        print_table(rows, [5, 32, 16, 28, 60])
 
     print("\nRun summary")
     print(f"  Targets searched : {summary.targets}")
@@ -95,6 +96,7 @@ def main() -> None:
     p = sub.add_parser("run", help="search all active targets and update the sheet")
     p.add_argument("--dry-run", action="store_true", help="do everything except write to the sheet")
     p.add_argument("--reaudit", action="store_true", help="re-check websites of existing leads too")
+    p.add_argument("--summary-only", action="store_true", help="print counts only, no lead details (for CI logs)")
     p.set_defaults(func=cmd_run)
 
     args = parser.parse_args()

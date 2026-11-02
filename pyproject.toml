@@ -1,7 +1,7 @@
 [project]
 name = "lead-finder"
 version = "0.1.0"
-description = "Add your description here"
+description = "Find and score local business leads from Google Maps into a Google Sheet"
 readme = "README.md"
 authors = [
     { name = "anuragyy403", email = "250585532+anuragyy403@users.noreply.github.com" }

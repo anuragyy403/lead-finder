@@ -1,0 +1,51 @@
+# Manual Run button only (Decision D38): Actions tab -> "Find leads" -> Run workflow. No schedule.
+name: Find leads
+
+on:
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: "Test only: do everything except write to the sheet"
+        type: boolean
+        default: false
+      reaudit:
+        description: "Re-check websites of leads already in the sheet"
+        type: boolean
+        default: false
+      max_requests:
+        description: "Max Google Places requests this run (each target uses up to 3)"
+        type: number
+        default: 30
+
+permissions:
+  contents: read
+
+# Never run two at once: both would read the sheet before either writes, and add the same leads twice
+concurrency:
+  group: find-leads
+  cancel-in-progress: false
+
+jobs:
+  run:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: astral-sh/setup-uv@v6
+
+      - name: Install
+        run: uv sync --frozen --no-dev
+
+      - name: Find, audit and score leads
+        env:
+          GOOGLE_API_KEY: ${{ secrets.GOOGLE_API_KEY }}
+          SHEET_ID: ${{ secrets.SHEET_ID }}
+          GOOGLE_SERVICE_ACCOUNT_JSON: ${{ secrets.GOOGLE_SERVICE_ACCOUNT_JSON }}
+          CONTACT_EMAIL: ${{ secrets.CONTACT_EMAIL }}
+          MAX_REQUESTS_PER_RUN: ${{ inputs.max_requests }}
+        # --summary-only: this repo is public, so its logs are too. Lead details stay in the sheet.
+        run: >
+          uv run lead-finder run --summary-only
+          ${{ inputs.dry_run && '--dry-run' || '' }}
+          ${{ inputs.reaudit && '--reaudit' || '' }}
