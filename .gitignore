@@ -1,0 +1,16 @@
+# Python
+__pycache__/
+*.py[oc]
+build/
+dist/
+wheels/
+*.egg-info
+.venv/
+.pytest_cache/
+.ruff_cache/
+
+# Secrets — never commit these
+.env
+.secrets/
+*.json
+!.vscode/*.json

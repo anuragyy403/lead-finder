@@ -1,0 +1,22 @@
+# Lead score weights. Points are added for each flaw found; total is capped at 100.
+# Higher score = weaker online presence = better lead for us.
+# Change the numbers here to re-tune scoring. No code change needed.
+# Agreed starting weights (Decision Log D31); review with sales after the first 50 leads.
+
+no_website = 40             # no website, or only a social media / directory page
+website_down = 40           # a website is listed but it doesn't load
+no_https = 15               # browser shows "Not secure"
+slow_site = 15              # PageSpeed mobile score below slow_site_threshold
+no_whatsapp = 10            # no WhatsApp button / link on the site
+no_viewport = 10            # not mobile-friendly
+old_copyright = 5           # copyright year is old_copyright_years or more behind
+good_rating_weak_site = 10  # rating >= good_rating AND at least one website flaw
+
+# Shown in the Flaws column as pitch points, but not counted (not in the agreed weights).
+no_meta_description = 0
+no_contact_form = 0
+
+# Thresholds
+slow_site_threshold = 50
+old_copyright_years = 2
+good_rating = 4.0
