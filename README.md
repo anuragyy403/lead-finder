@@ -86,6 +86,9 @@ to be on. The code is in [`apps_script/Code.gs`](apps_script/Code.gs).
 
 One click spends at most 3 Google requests per active target, capped at 60.
 
+While a run is going, **Run status** (column H of the Targets tab) says how long it's been running, and changes
+to ✅ or ❌ when it ends. It updates every minute, even with the sheet closed.
+
 ### One-time setup
 
 1. Add the GitHub secrets from **One-time setup for the Run button** above. The button can't work without them.
@@ -103,6 +106,9 @@ One click spends at most 3 Google requests per active target, capped at 60.
    published app. Then paste the token → **OK**. It should say *Token saved and working*.
 6. Optional: a big button on the Targets tab. **Insert → Drawing** → draw a box with the text "Find leads" → **Save
    and close** → click the drawing → **⋮ → Assign script** → type `findLeads` → **OK**.
+
+**Updating the script:** when `apps_script/Code.gs` changes, repeat step 3. If Google asks for permission again on the
+next click, allow it the same way as in step 5 (a new version may need one more permission).
 
 The token is stored in the sheet's script settings, which anyone who can edit the sheet could see. That's why it
 gets only one permission: it can start this workflow, nothing else. When it expires, create a new one and use

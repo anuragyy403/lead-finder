@@ -14,6 +14,8 @@ const REPO = 'anuragyy403/lead-finder';
 const WORKFLOW = 'run.yml';
 const MAX_REQUESTS_CAP = 60; // never let one click spend more than this many Google Places requests
 const TOKEN_KEY = 'GITHUB_TOKEN';
+const STATUS_COLUMN = 8; // column H of the Targets tab: "Run status", updated every minute while a run is going
+const WATCH_MINUTES_MAX = 45; // stop checking after this long (the workflow itself times out at 30)
 
 function onOpen() {
   SpreadsheetApp.getUi()
@@ -61,12 +63,81 @@ function startRun_(dryRun) {
     inputs: { dry_run: String(dryRun), reaudit: 'false', max_requests: String(maxRequests) },
   });
   if (resp.getResponseCode() === 204) {
+    PropertiesService.getScriptProperties().setProperties({ RUN_STARTED: String(Date.now()), RUN_DRY: String(dryRun) });
+    setStatus_('⏳ ' + runLabel_(dryRun) + ' started at ' + time_(new Date()) + '. Takes about 5–10 minutes.');
+    startWatching_();
     SpreadsheetApp.getActive().toast(
-      'Started. New leads appear in Maps Leads in about 5–10 minutes. Use Lead Finder → Check last run.',
-      'Lead Finder', 10);
+      'Started. Watch "Run status" in the Targets tab (column H). It updates every minute.', 'Lead Finder', 10);
   } else {
     ui.alert('Could not start the run', explain_(resp), ui.ButtonSet.OK);
   }
+}
+
+// Called every minute by the time trigger startWatching_ creates, until the run finishes
+function updateRunStatus() {
+  const props = PropertiesService.getScriptProperties();
+  const started = Number(props.getProperty('RUN_STARTED'));
+  const dryRun = props.getProperty('RUN_DRY') === 'true';
+  const minutes = Math.round((Date.now() - started) / 60000);
+
+  const resp = github_('get', '/actions/workflows/' + WORKFLOW + '/runs?event=workflow_dispatch&per_page=1');
+  if (resp.getResponseCode() !== 200) {
+    stopWatching_();
+    setStatus_('⚠️ Could not check the run. ' + explain_(resp));
+    return;
+  }
+  const run = JSON.parse(resp.getContentText()).workflow_runs[0];
+  // GitHub takes a few seconds to list a new run; until then the latest one is older (1 min allows for clock drift)
+  const ours = run && new Date(run.created_at).getTime() >= started - 60000;
+
+  if (ours && run.status === 'completed') {
+    stopWatching_();
+    const at = time_(new Date(run.updated_at));
+    if (run.conclusion !== 'success') {
+      setStatus_('❌ ' + runLabel_(dryRun) + ' failed at ' + at + '. Use Lead Finder → Check last run to see why.');
+    } else {
+      setStatus_('✅ ' + runLabel_(dryRun) + ' finished at ' + at + '. ' +
+        (dryRun ? 'Everything works (test only, nothing was written).' : 'New leads are in the Maps Leads tab.'));
+    }
+  } else if (minutes >= WATCH_MINUTES_MAX) {
+    stopWatching_();
+    setStatus_('⚠️ No result after ' + minutes + ' minutes. Use Lead Finder → Check last run.');
+  } else {
+    setStatus_('⏳ ' + runLabel_(dryRun) + ' running for ' + minutes + ' min. Takes about 5–10 minutes.');
+  }
+}
+
+function startWatching_() {
+  stopWatching_();
+  ScriptApp.newTrigger('updateRunStatus').timeBased().everyMinutes(1).create();
+}
+
+function stopWatching_() {
+  ScriptApp.getProjectTriggers()
+    .filter(t => t.getHandlerFunction() === 'updateRunStatus')
+    .forEach(t => ScriptApp.deleteTrigger(t));
+}
+
+function setStatus_(text) {
+  const sheet = SpreadsheetApp.getActive().getSheetByName('Targets');
+  if (!sheet) return;
+  if (sheet.getMaxColumns() < STATUS_COLUMN) {
+    sheet.insertColumnsAfter(sheet.getMaxColumns(), STATUS_COLUMN - sheet.getMaxColumns());
+  }
+  const header = sheet.getRange(1, STATUS_COLUMN);
+  if (header.getValue() !== 'Run status') {
+    header.setValue('Run status').setFontWeight('bold');
+    sheet.setColumnWidth(STATUS_COLUMN, 380);
+  }
+  sheet.getRange(2, STATUS_COLUMN).setValue(text).setWrap(true);
+}
+
+function runLabel_(dryRun) {
+  return dryRun ? 'Test run' : 'Lead search';
+}
+
+function time_(date) {
+  return Utilities.formatDate(date, 'Asia/Kolkata', 'HH:mm');
 }
 
 function checkLastRun() {
