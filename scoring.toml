@@ -18,7 +18,7 @@ no_contact_form = 0
 
 # How many new leads each search (Targets row) adds to the sheet: the highest scores win, businesses with no
 # flaw are never added. The others are checked again next run, so repeating a search adds the next best ones.
-top_leads_per_search = 10
+top_leads_per_search = 60
 
 # Thresholds
 slow_site_threshold = 50
