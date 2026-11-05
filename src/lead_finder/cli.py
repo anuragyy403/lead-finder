@@ -78,6 +78,7 @@ def cmd_run(args: argparse.Namespace) -> None:
           + ("  (stopped early: request limit reached)" if summary.stopped_by_budget else ""))
     print(f"  Businesses found : {summary.found}")
     print(f"  New leads        : {summary.new}" + ("  (dry run: nothing written)" if args.dry_run else ""))
+    print(f"  Not picked       : {summary.not_picked}  (outside the top per search, or no flaw found)")
     print(f"  Refreshed        : {summary.refreshed}")
 
 

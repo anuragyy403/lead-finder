@@ -6,6 +6,7 @@ import respx
 
 from lead_finder import sheet
 from lead_finder.enrich import Lead, base_lead
+from lead_finder.pipeline import best_new_leads
 from lead_finder.places import SEARCH_URL, Place, PlacesError, RequestBudget, find_places
 
 
@@ -104,3 +105,22 @@ def test_reaudit_updates_score_but_not_status():
 def test_missing_columns_is_a_clear_error():
     with pytest.raises(sheet.SheetError, match="missing columns"):
         sheet.plan_writes([["place_id", "Business name"]], [], "now", reaudit=False)
+
+
+def scored_lead(i: int, score: int, reviews: int | None = None) -> Lead:
+    lead = make_lead(i, reviews=reviews)
+    lead.score = score
+    return lead
+
+
+def test_best_new_leads_keeps_top_scores_per_search():
+    leads = [scored_lead(i, score=i * 10) for i in range(1, 6)] + [scored_lead(9, score=5)]
+    target_row = {f"p{i}": 2 for i in range(1, 6)} | {"p9": 3}
+    picked = best_new_leads(leads, target_row, limit=2)
+    assert [lead.place.place_id for lead in picked] == ["p5", "p4", "p9"]  # top 2 of row 2, row 3 keeps its own
+
+
+def test_best_new_leads_skips_no_flaw_and_breaks_ties_by_reviews():
+    leads = [scored_lead(1, 40, reviews=3), scored_lead(2, 40, reviews=200), scored_lead(3, 0, reviews=999)]
+    picked = best_new_leads(leads, {"p1": 2, "p2": 2, "p3": 2}, limit=10)
+    assert [lead.place.place_id for lead in picked] == ["p2", "p1"]

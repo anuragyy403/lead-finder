@@ -22,8 +22,11 @@ Nothing is sent to any business automatically. The script only builds the list.
 | Place type (optional) | Leave blank, or a Google place type to filter results | `real_estate_agency` |
 | Last run / Leads found | Filled by the script (new leads from the last run) | |
 
-Each row is searched as "Category in City". Google returns at most 60 businesses per search (3 requests). To get
-more, split a city into areas: `real estate agents` / `Whitefield, Bengaluru`.
+Each row is searched as "Category in City". Google returns at most 60 businesses per search (3 requests). All of
+them are checked, but only the **10 best new leads** (highest Score) are added to the sheet; businesses with no flaw
+are never added. Run the same search again to get the next 10 best. Change the 10 in
+[`scoring.toml`](scoring.toml) (`top_leads_per_search`). To reach more businesses, split a city into areas:
+`real estate agents` / `Whitefield, Bengaluru`.
 
 **Maps Leads tab**: the results, one row per business.
 

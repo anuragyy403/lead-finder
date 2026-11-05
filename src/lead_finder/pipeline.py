@@ -25,6 +25,7 @@ class RunSummary:
     request_limit: int
     found: int
     new: int
+    not_picked: int  # new businesses checked but outside the top N (or with no flaw); a later run can pick them
     refreshed: int
     stopped_by_budget: bool
     leads: list[Lead]
@@ -44,6 +45,20 @@ async def search_targets(
             for place in places:
                 found.setdefault(place.place_id, (place, target))
     return found, False
+
+
+def best_new_leads(leads: list[Lead], target_row: dict[str, int], limit: int) -> list[Lead]:
+    """The `limit` highest-scoring leads of each target. No flaw = nothing to pitch, so score 0 is never picked.
+    Ties go to the business with more reviews (more established, more likely to pay)."""
+    by_target: dict[int, list[Lead]] = {}
+    for lead in leads:
+        if lead.score > 0:
+            by_target.setdefault(target_row[lead.place.place_id], []).append(lead)
+    best: list[Lead] = []
+    for group in by_target.values():
+        group.sort(key=lambda lead: (-lead.score, -(lead.place.reviews or 0)))
+        best += group[:limit]
+    return best
 
 
 async def run(settings: Settings, dry_run: bool = False, reaudit: bool = False) -> RunSummary:
@@ -67,17 +82,21 @@ async def run(settings: Settings, dry_run: bool = False, reaudit: bool = False) 
         [(p, t.category, t.city) for p, t in to_audit],
         settings.google_api_key, weights, settings.contact_email,
     )
+    # Only the best new leads go into the sheet; the rest are checked again (and may be picked) on a later run
+    new_audited = [lead for lead in audited if lead.place.place_id not in existing]
+    target_row = {pid: t.row for pid, (_, t) in found.items()}
+    picked = best_new_leads(new_audited, target_row, int(weights["top_leads_per_search"]))
+    reaudited = [lead for lead in audited if lead.place.place_id in existing]
     # Existing leads: only Maps fields get refreshed, no website re-audit
-    leads = audited + [base_lead(p, t.category, t.city) for p, t in to_refresh]
+    leads = picked + reaudited + [base_lead(p, t.category, t.city) for p, t in to_refresh]
 
     now = now_ist()
     plan = sheet.plan_writes(rows, leads, now, reaudit)
     if not dry_run:
         sheet.write_leads(spreadsheet, plan)
-        new_ids = set(found) - set(existing)
         per_target = {t.row: 0 for t in targets}
-        for pid in new_ids:
-            per_target[found[pid][1].row] += 1
+        for lead in picked:
+            per_target[target_row[lead.place.place_id]] += 1
         sheet.update_targets(spreadsheet, per_target, now)
 
     return RunSummary(
@@ -86,7 +105,8 @@ async def run(settings: Settings, dry_run: bool = False, reaudit: bool = False) 
         request_limit=budget.limit,
         found=len(found),
         new=plan.new_count,
+        not_picked=len(new_audited) - len(picked),
         refreshed=plan.refreshed_count,
         stopped_by_budget=stopped,
-        leads=sorted(audited, key=lambda lead: -lead.score),
+        leads=sorted(picked + reaudited, key=lambda lead: -lead.score),
     )
